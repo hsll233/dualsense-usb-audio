@@ -38,12 +38,12 @@ def exclusive_run():
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", action="version", version="DualSense USB Audio 1.0.0")
+    parser.add_argument("--version", action="version", version="DualSense USB Audio 1.0.1")
     parser.add_argument("--seconds", type=float, default=0, help="0 means run until Ctrl+C")
-    parser.add_argument("--gain", type=float, default=40, help="motor strength/volume, 0-100 percent (default: 40)")
+    parser.add_argument("--gain", type=float, default=100, help="motor strength/volume, 0-200 percent (default: 100)")
     args = parser.parse_args()
-    if not math.isfinite(args.gain) or not 0 <= args.gain <= 100:
-        parser.error("gain must be between 0 and 100")
+    if not math.isfinite(args.gain) or not 0 <= args.gain <= 200:
+        parser.error("gain must be between 0 and 200")
     if not math.isfinite(args.seconds) or args.seconds < 0:
         parser.error("seconds must be a finite nonnegative number")
     return args
@@ -114,7 +114,7 @@ def main(args) -> None:
                 capture.start_stream()
                 print("USB system audio following started. Ctrl+C stops it.", flush=True)
                 print("按 + / - 调整振动强度（马达音量）；空格静音/恢复；Q 停止。", flush=True)
-                print(f"强度 {strength:.0f}% | 保护已开启：限幅、能量限制、20 分钟后休息 30 秒。", flush=True)
+                print(f"强度 {strength:.0f}% | 原版增益范围；瞬时满幅，持续能量保护；20 分钟后休息 30 秒。", flush=True)
                 print(f"Input: {source['name']} | {rate} Hz / {channels} ch", flush=True)
                 print(f"Output: {targets[0][1]['name']} | rear channels only", flush=True)
                 started = last_status = time.monotonic()
@@ -131,7 +131,7 @@ def main(args) -> None:
                             stopping = True
                             break
                         if key in ("+", "="):
-                            strength = min(100, strength + 5)
+                            strength = min(200, strength + 5)
                         elif key in ("-", "_"):
                             strength = max(0, strength - 5)
                         elif key == " ":

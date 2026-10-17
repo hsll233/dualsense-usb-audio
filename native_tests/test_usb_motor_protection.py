@@ -14,9 +14,30 @@ class ProtectionTests(unittest.TestCase):
             t = np.arange(rate // 2) / rate
             loud = np.column_stack((4 * np.sin(2 * np.pi * 160 * t),
                                     np.sin(2 * np.pi * 90 * t)))
-            output = engine.process(loud, 100)
-            self.assertLessEqual(float(np.max(np.abs(output))), .500001)
-            self.assertTrue(np.all(np.sqrt(np.mean(output ** 2, axis=0)) <= .180001))
+            for start in range(0, len(loud), rate // 100):
+                output = engine.process(loud[start:start + rate // 100], 200)
+                self.assertLessEqual(float(np.max(np.abs(output))), 1.000001)
+                self.assertTrue(np.all(engine.energy <= .18 ** 2 + 1e-9))
+
+    def test_short_transient_can_reach_full_scale(self):
+        engine = MotorProtection(48000)
+        engine.gain = 1
+        engine.elapsed = .5
+        t = np.arange(480) / 48000
+        output = engine.process(np.column_stack((np.sin(2 * np.pi * 160 * t), t * 0)), 100)
+        self.assertGreater(np.max(np.abs(output)), .95)
+        self.assertFalse(np.any(output[:, 1]))
+
+    def test_sustained_loud_signal_is_limited_and_silence_restores_headroom(self):
+        engine = MotorProtection(48000)
+        t = np.arange(48000 * 3) / 48000
+        loud = np.column_stack((np.sin(2 * np.pi * 160 * t), t * 0))
+        output = engine.process(loud, 200)
+        self.assertTrue(engine.limited)
+        self.assertLess(np.sqrt(np.mean(output[-48000:, 0] ** 2)), .181)
+        before = engine.energy.copy()
+        engine.process(np.zeros((48000 * 3, 2)), 100)
+        self.assertLess(engine.energy[0], before[0] * .06)
 
     def test_invalid_samples_and_silent_channel_do_not_leak(self):
         engine = MotorProtection(48000)
